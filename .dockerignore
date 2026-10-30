@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+*.db
+*.db-journal
+prisma/*.db
+prisma/*.db-journal
+.screenshots
+public/generated
+stitch_oma_360_room_renovator
+README.md

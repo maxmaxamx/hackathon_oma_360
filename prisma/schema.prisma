@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         String    @default("CLIENT")
+  createdAt    DateTime  @default(now())
+
+  clientProjects   Project[]     @relation("ClientProjects")
+  foremanProjects  Project[]     @relation("ForemanProjects")
+  messages         ChatMessage[]
+}
+
+model Project {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  clientId      String
+  foremanId     String?
+  status        String   @default("DRAFT")
+
+  roomType      String
+  area          Float
+  ceiling       Float
+  description   String
+  budget        Float
+  style         String?
+
+  answersJson   String?
+  questionsJson String?
+
+  tier          String?
+  previewImage  String?
+
+  materialsTotal Float @default(0)
+  servicesTotal  Float @default(0)
+  total          Float @default(0)
+  areaLabel      String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  paidAt      DateTime?
+  completedAt DateTime?
+
+  client   User @relation("ClientProjects", fields: [clientId], references: [id], onDelete: Cascade)
+  foreman  User? @relation("ForemanProjects", fields: [foremanId], references: [id])
+
+  packages EstimatePackage[]
+  items    ProjectItem[]
+  stages   PlanStage[]
+  messages ChatMessage[]
+  escrow   EscrowAccount?
+  jobs     AiJob[]
+
+  @@index([clientId])
+  @@index([foremanId])
+  @@index([status])
+}
+
+model EstimatePackage {
+  id          String  @id @default(cuid())
+  projectId   String
+  tier        String
+  title       String
+  subtitle    String?
+  summary     String?
+  total       Float   @default(0)
+  itemsCount  Int     @default(0)
+  budgetCap   Float   @default(0)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, tier])
+}
+
+model ProjectItem {
+  id          String  @id @default(cuid())
+  projectId   String
+  tier        String
+  stageNumber Int
+  category    String
+  productId   String
+  name        String
+  link        String
+  image       String
+  unit        String
+  quantity    Int
+  unitPrice   Float
+  total       Float
+  calcNote    String?
+  purchased   Boolean @default(false)
+  delivered   Boolean @default(false)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, tier])
+  @@index([projectId, stageNumber])
+}
+
+model PlanStage {
+  id          String  @id @default(cuid())
+  projectId   String
+  number      Int
+  title       String
+  description String
+  durationDays Int
+  materialsTotal Float @default(0)
+  laborTotal     Float @default(0)
+  budget         Float @default(0)
+  status      String  @default("PENDING")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, number])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  projectId String
+  authorId  String
+  text      String
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+}
+
+model EscrowAccount {
+  id        String  @id @default(cuid())
+  projectId String  @unique
+  total     Float   @default(0)
+  funded    Float   @default(0)
+  released  Float   @default(0)
+  status    String  @default("PENDING")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model AiJob {
+  id        String   @id @default(cuid())
+  projectId String
+  type      String
+  status    String   @default("RUNNING")
+  progress  Int      @default(0)
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, type, createdAt])
+}
